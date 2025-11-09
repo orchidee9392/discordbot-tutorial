@@ -1,30 +1,43 @@
 package main
 
-import(
+import (
 	"fmt"
 	"log"
 	"os"
+
 	"github.com/bwmarrin/discordgo"
 )
 
-func main(){
+func main() {
 	//トークンの取得
 	token := os.Getenv("DISCORD_TOKEN")
-	if token == ""{
+	if token == "" {
 		log.Fatal("DISCORD_TOKEN が未設定です")
 	}
 
 	//Discordセッションの生成
 	session, err := discordgo.New("Bot " + token)
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	//使用イベント設定
-	session.Identify.Intents = discordgo.IntentsGuilds
+	//使用イベントの設定
+	session.Identify.Intents = discordgo.IntentsGuilds |
+		discordgo.IntentsGuildMessages |
+		discordgo.IntentsMessageContent
+
+	//メッセージ受信ハンドラを登録
+	session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+		// Botの発言には反応しない（無限ループ防止）
+		if m.Author.Bot {
+			return
+		}
+
+		_, _ = s.ChannelMessageSend(m.ChannelID, m.Content)
+	})
 
 	//セッション開始
-	if err := session.Open(); err != nil{
+	if err := session.Open(); err != nil {
 		log.Fatal(err)
 	}
 	defer session.Close()
